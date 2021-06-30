@@ -1,4 +1,6 @@
 # to find COM ports:
+# test
+# test
 # in terminal: dmesg | grep tty
 import tkinter as tk
 from tkinter import messagebox
