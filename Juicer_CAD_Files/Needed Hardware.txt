@@ -1,0 +1,7 @@
+M5 20mm or 25mm length x2 for scale on platform
+
+3D print 2 x spacers for the frame
+
+3D print platform
+
+3D print plate to put rpi into
