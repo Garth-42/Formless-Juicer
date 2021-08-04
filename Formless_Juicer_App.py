@@ -19,6 +19,7 @@ global os
 os = "Windows"
 
 def listPorts():
+    # https://stackoverflow.com/questions/35724405/pyserial-get-the-name-of-the-device-behind-a-com-port
     """!
     @brief Provide a list of names of serial ports that can be opened as well as a
     a list of Arduino models.
