@@ -1,10 +1,52 @@
 # to find COM ports:
 # in terminal: dmesg | grep tty
+# https://stackoverflow.com/questions/35724405/pyserial-get-the-name-of-the-device-behind-a-com-port
+
+
 import tkinter as tk
 from tkinter import messagebox
 import serial
 import time
-# test
+import serial.tools.list_ports
+
+# Linux: '/dev/ttyACM0'
+# Windows: 'COM6'
+# load_cell_port = "COM7"
+# pumps_port = "COM6"
+
+global os
+#os = "Linux"
+os = "Windows"
+
+def listPorts():
+    """!
+    @brief Provide a list of names of serial ports that can be opened as well as a
+    a list of Arduino models.
+    @return A tuple of the port list and a corresponding list of device descriptions
+    """
+
+    ports = list( serial.tools.list_ports.comports() )
+
+    resultPorts = []
+    descriptions = []
+    for port in ports:
+        if not port.description.startswith( "Arduino" ):
+            # correct for the somewhat questionable design choice for the USB
+            # description of the Arduino Uno
+            if port.manufacturer is not None:
+                if port.manufacturer.startswith( "Arduino" ) and \
+                port.device.endswith( port.description ):
+                    port.description = "Arduino Uno"
+                else:
+                    continue
+            else:
+                continue
+        if port.device:
+            resultPorts.append( port.device )
+            descriptions.append( str( port.description ) )
+
+    return (resultPorts, descriptions)           
+
 
 class Application(tk.Frame):
     def __init__(self, master=None):
@@ -24,11 +66,11 @@ class Application(tk.Frame):
         global vol
         print( "Volume:", self.drink_vol.get(), "Recipe is ", self.drink_recipe.get())
         if self.drink_recipe.get() == "Run Pump 1":
-            self.fillToWeight(1,1000)
+            self.fillToWeight(1,10)
         elif self.drink_recipe.get() == "Run Pump 2":
-            self.fillToWeight(2,1000)
+            self.fillToWeight(2,10)
         elif self.drink_recipe.get() == "Run Pump 3":
-            self.fillToWeight(3,1000)
+            self.fillToWeight(3,10)
         elif self.drink_recipe.get() == "Emperors Cleanse":
             
             # Total oz of drink selected
@@ -56,14 +98,43 @@ class Application(tk.Frame):
             time.sleep(0.42)
             loadCell.write(('10\n').encode()) # Send device calibration weight data
             messagebox.showinfo(message="Calibration complete!")
-            
 
+    
     def startSerial(self):
+        # Assign COM ports
+        global os
+        devices = listPorts()[1]
+        for device in devices:
+            if os == "Windows":
+                if str(device).find("Mega 2560") != -1:
+                    port = str(device)[str(device).find("(")+1:-1]
+                    print(port)
+                    pumps_port = port
+                if str(device).find("Uno") != -1:
+                    port = str(device)[str(device).find("(")+1:-1]
+                    print(port)
+                    load_cell_port = port
+                else:
+                    print("no pump or load cell found")
+            elif os == "Linux":
+                if str(device).find("Mega 2560") != -1:
+                    port = str(device)[str(device).find("(")+1:-1]
+                    print(port)
+                    pumps_port = port
+                if str(device).find("Uno") != -1:
+                    port = str(device)[str(device).find("(")+1:-1]
+                    print(port)
+                    load_cell_port = port
+                else:
+                    print("no pump or load cell found")
+            else:
+                print("OS isn''t recognized")
+
         loadCell.baudrate = 9600
-        loadCell.port = '/dev/ttyACM0'
+        loadCell.port = load_cell_port
         loadCell.open()
         pumps.baudrate = 9600
-        pumps.port = '/dev/ttyACM1'
+        pumps.port = pumps_port
         pumps.open()
         print('serial started')
         self.readLoadCell()
@@ -76,7 +147,8 @@ class Application(tk.Frame):
         # https://stackoverflow.com/questions/1093598/pyserial-how-to-read-the-last-line-sent-from-a-serial-device
         global readSerial_after_id
         global last_received
-        
+        tries = 0
+
         while True:
             time.sleep(.1)
             # Get new values from the sensor
@@ -88,9 +160,13 @@ class Application(tk.Frame):
                 try:
                     return float(last_received.rstrip())
                 except ValueError:
-                    pass
+                    print(ValueError)
             except IndexError:
-                pass
+                print(IndexError)
+            tries = tries + 1
+            if tries > 5:
+                print("failed to retrieve data") 
+                return "Failed to get load cell data"
 
 
 
