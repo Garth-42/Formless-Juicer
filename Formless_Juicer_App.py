@@ -13,12 +13,14 @@ import serial.tools.list_ports
 
 # Linux: '/dev/ttyACM0'
 # Windows: 'COM6'
-# load_cell_port = "COM7"
-# pumps_port = "COM6"
+global load_cell_port
+global pumps_port
+load_cell_port = '/dev/ttyACM1'
+pumps_port = '/dev/ttyACM0'
 
 global os
-#os = "Linux"
-os = "Windows"
+os = "Linux"
+#os = "Windows"
 
 def listPorts():
     # https://stackoverflow.com/questions/35724405/pyserial-get-the-name-of-the-device-behind-a-com-port
@@ -33,17 +35,6 @@ def listPorts():
     resultPorts = []
     descriptions = []
     for port in ports:
-        if not port.description.startswith( "Arduino" ):
-            # correct for the somewhat questionable design choice for the USB
-            # description of the Arduino Uno
-            if port.manufacturer is not None:
-                if port.manufacturer.startswith( "Arduino" ) and \
-                port.device.endswith( port.description ):
-                    port.description = "Arduino Uno"
-                else:
-                    continue
-            else:
-                continue
         if port.device:
             resultPorts.append( port.device )
             descriptions.append( str( port.description ) )
@@ -105,8 +96,12 @@ class Application(tk.Frame):
     
     def startSerial(self):
         # Assign COM ports
+        global pumps_port
+        global load_cell_port
         global os
-        devices = listPorts()[1]
+        devices = listPorts()
+        print(devices)
+        devices = devices[1]
         for device in devices:
             if os == "Windows":
                 if str(device).find("Mega 2560") != -1:
@@ -120,16 +115,7 @@ class Application(tk.Frame):
                 else:
                     print("no pump or load cell found")
             elif os == "Linux":
-                if str(device).find("Mega 2560") != -1:
-                    port = str(device)[str(device).find("(")+1:-1]
-                    print(port)
-                    pumps_port = port
-                if str(device).find("Uno") != -1:
-                    port = str(device)[str(device).find("(")+1:-1]
-                    print(port)
-                    load_cell_port = port
-                else:
-                    print("no pump or load cell found")
+                pass # pass in exiting global values from top of file
             else:
                 print("OS isn''t recognized")
 
